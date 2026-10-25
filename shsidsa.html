@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Pathway · Personal Event Agent</title>
+<style>
+  :root{
+    --bg:#f4f5fb; --card:#fff; --ink:#171a2b; --muted:#6b7186; --line:#e7e9f3;
+    --accent:#5b5bd6; --accent-2:#8b5cf6; --accent-soft:#eeeefe;
+    --radius:16px;
+    --shadow:0 1px 2px rgba(20,20,50,.05), 0 8px 24px rgba(20,20,50,.06);
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3{margin:0; letter-spacing:-.02em}
+  h1{font-size:24px}
+  h2{font-size:16px}
+  button{font:inherit}
+  code{background:#eef0f8; padding:1px 5px; border-radius:5px; font-size:12.5px}
+
+  /* ---------- layout ---------- */
+  .app{display:grid; grid-template-columns:236px 1fr; min-height:100vh}
+  .sidebar{
+    background:#fff; border-right:1px solid var(--line); padding:22px 16px;
+    display:flex; flex-direction:column; gap:26px;
+    position:sticky; top:0; height:100vh;
+  }
+  .brand{display:flex; align-items:center; gap:10px; padding:0 6px}
+  .brand-mark{
+    width:34px; height:34px; border-radius:10px; flex:none;
+    background:linear-gradient(135deg,var(--accent),var(--accent-2));
+    display:grid; place-items:center; color:#fff; font-weight:700; font-size:15px;
+  }
+  .brand-name{font-weight:700; font-size:15px}
+  .brand-sub{font-size:11px; color:var(--muted)}
+  .nav{display:flex; flex-direction:column; gap:3px}
+  .nav-btn{
+    display:flex; align-items:center; gap:10px; width:100%; padding:10px 12px;
+    border:0; background:transparent; border-radius:10px; font-size:14px;
+    color:var(--muted); cursor:pointer; text-align:left; transition:.15s;
+  }
+  .nav-btn:hover{background:var(--bg); color:var(--ink)}
+  .nav-btn.active{background:var(--accent-soft); color:var(--accent); font-weight:600}
+  .sidebar-foot{margin-top:auto; font-size:12px; color:var(--muted); padding:0 6px; line-height:1.6}
+  .sidebar-foot b{color:var(--ink)}
+
+  main{padding:28px 34px 70px; max-width:1080px; width:100%}
+  .topbar{display:flex; align-items:flex-end; justify-content:space-between; gap:16px; flex-wrap:wrap; margin-bottom:22px}
+  .sub{color:var(--muted); font-size:14px; margin-top:5px}
+
+  /* ---------- components ---------- */
+  .btn{
+    border:1px solid var(--line); background:#fff; color:var(--ink);
+    padding:9px 16px; border-radius:10px; font-size:13.5px; font-weight:500;
+    cursor:pointer; transition:.15s; white-space:nowrap;
+  }
+  .btn:hover{border-color:#cfd2e4; transform:translateY(-1px)}
+  .btn.primary{background:linear-gradient(135deg,var(--accent),var(--accent-2)); border-color:transparent; color:#fff}
+  .btn.primary:hover{filter:brightness(1.06)}
+  .btn.ghost{background:#fff}
+  .link{border:0; background:none; color:var(--accent); cursor:pointer; font-size:inherit; padding:0; text-decoration:underline}
+
+  .card{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:18px 20px; box-shadow:var(--shadow); margin-bottom:16px}
+
+  .stats{display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:24px}
+  .stat{background:#fff; border:1px solid var(--line); border-radius:14px; padding:14px 16px; box-shadow:var(--shadow)}
+  .stat .k{font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.07em; font-weight:600}
+  .stat .v{font-size:26px; font-weight:700; margin-top:6px; letter-spacing:-.03em}
+
+  .section-head{display:flex; align-items:center; justify-content:space-between; gap:12px; margin:26px 0 12px}
+  .badge{font-size:11.5px; background:var(--accent-soft); color:var(--accent); padding:3px 9px; border-radius:20px; font-weight:600}
+
+  .sug{display:flex; gap:14px; padding:16px 18px; border-radius:14px; background:#fff; border:1px solid var(--line); box-shadow:var(--shadow); border-left-width:3px}
+  .sug + .sug{margin-top:10px}
+  .sug.warn{border-left-color:#e5484d}
+  .sug.good{border-left-color:#2f9e44}
+  .sug.info{border-left-color:var(--accent)}
+  .sug-icon{font-size:20px; line-height:1.2}
+  .sug h3{font-size:14.5px; margin-bottom:4px}
+  .sug p{margin:0; font-size:13.5px; color:var(--muted); line-height:1.55}
+
+  /* ---------- events ---------- */
+  .event{
+    display:flex; gap:16px; align-items:flex-start; background:#fff; border:1px solid var(--line);
+    border-radius:14px; padding:14px 16px; box-shadow:var(--shadow); margin-bottom:10px;
+    border-left:3px solid var(--cat);
+  }
+  .event-date{
+    flex:none; width:52px; text-align:center; background:color-mix(in srgb, var(--cat) 10%, #fff);
+    border-radius:10px; padding:7px 0; color:var(--cat);
+  }
+  .ed-month{display:block; font-size:10.5px; text-transform:uppercase; letter-spacing:.08em; font-weight:700}
+  .ed-day{display:block; font-size:19px; font-weight:700; line-height:1.15}
+  .event-body{flex:1; min-width:0}
+  .event-top{display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+  .event-top h3{font-size:15px}
+  .pill{font-size:11px; font-weight:600; padding:2px 9px; border-radius:20px; color:var(--cat); background:color-mix(in srgb, var(--cat) 12%, #fff); white-space:nowrap}
+  .event-meta{margin:6px 0 0; font-size:12.5px; color:var(--muted)}
+  .event-meta strong{color:var(--ink); font-weight:600}
+  .src{background:#eef0f8; padding:1px 6px; border-radius:5px; font-size:11px}
+  .event-desc{margin:7px 0 0; font-size:13px; color:var(--muted); line-height:1.5}
+  .event-actions{display:flex; align-items:center; gap:6px; flex:none}
+  .icon-btn{border:0; background:transparent; color:#b9bdd0; cursor:pointer; font-size:15px; padding:6px; border-radius:8px}
+  .icon-btn:hover{background:#fee; color:#e5484d}
+  .btn.ghost.on{background:#e8f7ed; border-color:#bfe6cb; color:#1f7a3d}
+
+  .chips{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px}
+  .chip{border:1px solid var(--line); background:#fff; border-radius:20px; padding:6px 13px; font-size:12.5px; color:var(--muted); cursor:pointer}
+  .chip.on{background:var(--ink); border-color:var(--ink); color:#fff}
+  .empty{color:var(--muted); font-size:14px; padding:22px; text-align:center; background:#fff; border:1px dashed var(--line); border-radius:14px}
+
+  /* ---------- interests ---------- */
+  .sliders{display:flex; flex-direction:column; gap:14px; margin-top:16px}
+  .slider-row{display:grid; grid-template-columns:170px 1fr 34px; align-items:center; gap:14px}
+  .sr-label{font-size:13.5px; font-weight:500}
+  .slider-row output{font-size:13px; font-weight:700; color:var(--cat); text-align:right}
+  input[type=range]{width:100%; accent-color:var(--cat)}
+
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:14px; margin:14px 0}
+  label{display:block; font-size:12.5px; color:var(--muted); font-weight:600}
+  label input, label select, label textarea{
+    display:block; width:100%; margin-top:6px; padding:9px 11px; font:inherit; font-size:13.5px;
+    border:1px solid var(--line); border-radius:9px; background:#fff; color:var(--ink);
+  }
+  label input:focus, label select:focus, label textarea:focus{outline:2px solid var(--accent-soft); border-color:var(--accent)}
+  .hint{font-size:13px; color:var(--muted); line-height:1.55; margin:6px 0 0}
+  .row-btns{display:flex; gap:10px; flex-wrap:wrap; margin-top:6px}
+  .notice{
+    background:#fff8e6; border:1px solid #f4e2b0; border-radius:14px; padding:15px 18px;
+    font-size:13.5px; line-height:1.6; color:#6b5a20; margin-bottom:16px;
+  }
+  .log{margin-top:12px; display:flex; flex-direction:column; gap:6px}
+  .log-line{font-size:12.5px; padding:8px 11px; border-radius:8px; background:#f5f6fb; color:var(--muted); font-family:ui-monospace,Menlo,monospace}
+  .log-line.err{background:#fdecec; color:#a32222}
+  .log-line.ok{background:#e8f7ed; color:#1f7a3d}
+
+  /* ---------- dialog ---------- */
+  dialog{border:0; border-radius:18px; padding:24px; width:min(480px,92vw); box-shadow:0 24px 60px rgba(20,20,40,.25)}
+  dialog::backdrop{background:rgba(20,20,40,.35); backdrop-filter:blur(2px)}
+  dialog h2{margin-bottom:16px; font-size:18px}
+  dialog label{margin-bottom:12px}
+  .dialog-actions{display:flex; justify-content:flex-end; gap:10px; margin-top:8px}
+
+  /* ---------- toast ---------- */
+  #toast{
+    position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(20px);
+    background:var(--ink); color:#fff; padding:11px 20px; border-radius:12px; font-size:13.5px;
+    opacity:0; pointer-events:none; transition:.25s; z-index:99;
+  }
+  #toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
+
+  @media (max-width:880px){
+    .app{grid-template-columns:1fr}
+    .sidebar{position:static; height:auto; flex-direction:row; align-items:center; gap:14px; overflow-x:auto; padding:14px}
+    .brand-sub,.sidebar-foot{display:none}
+    .nav{flex-direction:row; gap:6px}
+    .nav-btn{white-space:nowrap}
+    main{padding:20px}
+    .stats{grid-template-columns:1fr 1fr}
+    .grid2{grid-template-columns:1fr}
+    .slider-row{grid-template-columns:1fr 1fr 30px}
+    .event{flex-wrap:wrap}
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">P</div>
+      <div>
+        <div class="brand-name">Pathway</div>
+        <div class="brand-sub">personal event agent</div>
+      </div>
+    </div>
+    <nav class="nav">
+      <button class="nav-btn active" data-view="dashboard">◈ Dashboard</button>
+      <button class="nav-btn" data-view="events">▤ Events</button>
+      <button class="nav-btn" data-view="interests">✦ Interests</button>
+      <button class="nav-btn" data-view="blackboard">⟳ Blackboard</button>
+    </nav>
+    <div class="sidebar-foot">
+      Signed in as <b id="footName">Student</b><br>
+      <span id="footInterests">—</span>
+    </div>
+  </aside>
+
+  <main>
+    <div class="topbar">
+      <div>
+        <h1 id="viewTitle">Dashboard</h1>
+        <div class="sub" id="viewSub">Your agent at a glance</div>
+      </div>
+      <button class="btn primary" data-openadd>+ Add event</button>
+    </div>
+
+    <section class="view" id="view-dashboard"></section>
+    <section class="view" id="view-events" hidden></section>
+    <section class="view" id="view-interests" hidden></section>
+    <section class="view" id="view-blackboard" hidden></section>
+  </main>
+</div>
+
+<dialog id="eventDialog">
+  <form method="dialog" id="eventForm">
+    <h2>New event</h2>
+    <label>Title <input name="title" required maxlength="80" placeholder="e.g. AP Biology Midterm"></label>
+    <label>Category
+      <select name="category" id="catSelect"></select>
+    </label>
+    <div class="grid2" style="margin:0">
+      <label>Date <input type="date" name="date" required></label>
+      <label>Time <input type="time" name="time" value="09:00"></label>
+    </div>
+    <label>Location <input name="location" maxlength="60" placeholder="Room 210 / Zoom"></label>
+    <label>Notes <textarea name="description" rows="2" maxlength="200" placeholder="Optional"></textarea></label>
+    <div class="dialog-actions">
+      <button type="button" class="btn ghost" id="cancelEvent">Cancel</button>
+      <button type="submit" class="btn primary">Add event</button>
+    </div>
+  </form>
+</dialog>
+
+<div id="toast"></div>
+
+<script>
+/* =========================================================
+   PATHWAY — personal school-event agent
+   Single-file demo. All state persists in localStorage.
+   ========================================================= */
+
+/* ---------- constants ---------- */
+const CATEGORIES = {
+  test:        {label:'Tests & Exams',  color:'#e5484d', icon:'📝'},
+  college:     {label:'College Visits', color:'#5b5bd6', icon:'🎓'},
+  competition: {label:'Competitions',   color:'#f2a33c', icon:'🏆'},
+  lecture:     {label:'PA Lectures',    color:'#0ea5a5', icon:'🎤'},
+  game:        {label:'Games & Sports', color:'#2f9e44', icon:'🏀'},
+  school:      {label:'School Events',  color:'#8b5cf6', icon:'🏫'},
+};
+const VIEW_META = {
+  dashboard:  ['Dashboard', 'Your agent at a glance'],
+  events:     ['Events', 'Everything on your radar'],
+  interests:  ['Interests', 'Teach your agent what matters'],
+  blackboard: ['Blackboard', 'Sync your course calendar'],
+};
+const STORAGE_KEY = 'pathway.state.v2';
+
+/* ---------- tiny helpers ---------- */
+const $  = (s, el = document) => el.querySelector(s);
+const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+const uid = () => Math.random().toString(36).slice(2, 10);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => (
+  {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]
+));
+const pad = n => String(n).padStart(2, '0');
+const toISO = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+const isoFromOffset = (days, hour = 9, min = 0) => {
+  const d = new Date(); d.setDate(d.getDate() + days); d.setHours(hour, min, 0, 0);
+  return toISO(d);
+};
+const startOfDay = d => { const x = new Date(d); x.setHours(0,0,0,0); return x; };
+const daysUntil = iso => Math.round((startOfDay(new Date(iso)) - startOfDay(new Date())) / 86400000);
+const fmtDate = iso => new Date(iso).toLocaleDateString(undefined, {weekday:'short', month:'short', day:'numeric'});
+const fmtTime = iso => new Date(iso).toLocaleTimeString(undefined, {hour:'numeric', minute:'2-digit'});
+
+/* ---------- seed data ---------- */
+function seedEvents(){
+  return [
+    {title:'AP Calculus Unit Test',        category:'test',        date:isoFromOffset(2, 9, 0),   location:'Room 204', description:'Chapters 5–6: integrals & applications.'},
+    {title:'Robotics Club Build Session',  category:'school',      date:isoFromOffset(3, 15, 30), location:'Makerspace', description:'Bring the servo mounts.'},
+    {title:'MIT Info Session & Campus Tour', category:'college',   date:isoFromOffset(4, 14, 0),  location:'Auditorium', description:'Admissions officer Q&A after the tour.'},
+    {title:'AMC 12 Math Competition',      category:'competition', date:isoFromOffset(6, 10, 0),  location:'Exam Hall B', description:'Bring pencils, no calculators.'},
+    {title:'PA Lecture: Careers in AI',    category:'lecture',     date:isoFromOffset(7, 18, 30), location:'Lecture Hall', description:'Alumni panel from industry and research.'},
+    {title:'Varsity Basketball vs. Riverside', category:'game',    date:isoFromOffset(9, 16, 0),  location:'Main Gym', description:'Senior night — arrive early.'},
+    {title:'Biology Midterm',              category:'test',        date:isoFromOffset(12, 9, 0),  location:'Room 118', description:'Units 1–4, including lab practical.'},
+    {title:'Science Fair Registration Due', category:'school',     date:isoFromOffset(15, 23, 59),location:'Online', description:'Submit project abstract.'},
+    {title:'Stanford Alumni Q&A',          category:'college',     date:isoFromOffset(18, 19, 0), location:'Zoom', description:'Small-group chat about essays.'},
+  ].map(e => ({id: uid(), source: 'manual', ...e}));
+}
+
+function defaultState(){
+  return {
+    profile: {
+      name: 'Student',
+      interests: {test:4, college:5, competition:3, lecture:2, game:2, school:2},
+      keywords: ['robotics', 'computer science'],
+      studyHours: 2,
+      reminderDays: 3,
+    },
+    events: seedEvents(),
+    attending: [],
+    lastSync: null,
+  };
+}
+
+/* ---------- persistence ---------- */
+function loadState(){
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return defaultState();
+    const s = JSON.parse(raw);
+    if (!s || !Array.isArray(s.events) || !s.profile) return defaultState();
+    return s;
+  } catch { return defaultState(); }
+}
+function save(){
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch {}
+}
+
+/* ---------- state ---------- */
+let state = loadState();
+let currentView = 'dashboard';
+let currentFilter = 'all';
+
+/* ---------- queries ---------- */
+const upcomingEvents = () =>
+  state.events
+    .filter(e => daysUntil(e.date) >= 0)
+    .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+/* =========================================================
+   THE AGENT
+   ========================================================= */
+
+/** How much this event matches what the student cares about. */
+function scoreEvent(ev){
+  let score = state.profile.interests[ev.category] ?? 1;
+  const text = `${ev.title} ${ev.description || ''} ${ev.location || ''}`.toLowerCase();
+  for (const kw of state.profile.keywords){
+    const k = kw.trim().toLowerCase();
+    if (k && text.includes(k)) score += 2;
+  }
+  const d = daysUntil(ev.date);
+  if (d === 0) score += 2;        // today = urgent
+  else if (d <= 2) score += 1;    // imminent
+  if (state.attending.includes(ev.id)) score += 1;
+  return score;
+}
+
+function lowestPriority(list){
+  return list.slice().sort(
+    (a, b) => (state.profile.interests[a.category] ?? 1) - (state.profile.interests[b.category] ?? 1)
+  )[0];
+}
+
+/** The core reasoning step: turn state into human suggestions. */
+function buildSuggestions(){
+  const out = [];
+  const up = upcomingEvents();
+  if (!up.length){
+    return [{tone:'info', icon:'🌱', title:'Nothing on the radar yet',
+      body:'Add your first event, or pull your course calendar from the Blackboard tab, and your agent will start planning around it.'}];
+  }
+
+  /* 1 — crunch detection ------------------------------------------------ */
+  const week = up.filter(e => daysUntil(e.date) <= 7);
+  const heavy = week.filter(e => e.category === 'test' || e.category === 'competition');
+  if (heavy.length >= 2){
+    const names = heavy.slice(0, 3).map(e => e.title).join(' · ');
+    const sessions = Math.max(2, Math.ceil(heavy.length * 1.5));
+    out.push({
+      tone: 'warn', icon: '🔥',
+      title: `Crunch week ahead — ${heavy.length} high-stakes events in 7 days`,
+      body: `${names}. Instead of one long cram, split review into ${sessions} short sessions and protect about ${state.profile.studyHours}h per night. Front-load the earliest deadline.`
+    });
+  }
+
+  /* 2 — interest-matched recommendations -------------------------------- */
+  const recs = up
+    .filter(e => !state.attending.includes(e.id))
+    .map(e => ({e, s: scoreEvent(e)}))
+    .sort((a, b) => b.s - a.s)
+    .slice(0, 3)
+    .filter(x => x.s >= 4);
+  if (recs.length){
+    out.push({
+      tone: 'good', icon: '🎯',
+      title: 'Events matched to your interests',
+      body: recs.map(x => `${CATEGORIES[x.e.category].icon} ${x.e.title} — ${fmtDate(x.e.date)}`).join('   ·   ')
+        + '. Tap "Attend" to lock them in.'
+    });
+  }
+
+  /* 3 — study plan for the next test ------------------------------------ */
+  const nextTest = up.find(e => e.category === 'test');
+  if (nextTest){
+    const d = daysUntil(nextTest.date);
+    const perDay = state.profile.studyHours;
+    if (d === 0){
+      out.push({tone:'info', icon:'⏰', title:`${nextTest.title} is today`,
+        body:`Do a 20-minute pass over your summary sheet, pack what you need, and arrive 10 minutes early. No new material tonight.`});
+    } else {
+      const total = Math.max(1, Math.ceil(d * perDay * 0.75));
+      out.push({
+        tone: 'info', icon: '📅',
+        title: `Study plan for ${nextTest.title}`,
+        body: `${d} day${d === 1 ? '' : 's'} out — roughly ${total} focused hours to cover. Try ${Math.min(perDay, Math.ceil(total / d))}h per day, mornings for recall and one full practice set ${Math.max(1, d - 2)} days before.`
+      });
+    }
+  }
+
+  /* 4 — free window ----------------------------------------------------- */
+  const busyTomorrow = up.some(e => daysUntil(e.date) === 1);
+  if (!busyTomorrow){
+    const nxt = up[0];
+    out.push({
+      tone: 'info', icon: '🌤️',
+      title: 'Tomorrow is clear',
+      body: `No events scheduled. Good window to get ahead on ${nxt.title} (${daysUntil(nxt.date)} days out), or to sign up for something new.`
+    });
+  }
+
+  /* 5 — overbooked days -------------------------------------------------- */
+  const byDay = {};
+  up.forEach(e => { const k = e.date.slice(0, 10); (byDay[k] ||= []).push(e); });
+  for (const [day, list] of Object.entries(byDay)){
+    if (list.length >= 3){
+      const drop = lowestPriority(list);
+      out.push({
+        tone: 'warn', icon: '⚠️',
+        title: `${list.length} events on ${fmtDate(list[0].date)}`,
+        body: `${list.map(e => e.title).join(', ')}. Consider skipping ${drop.title} — you rated ${CATEGORIES[drop.category].label} at only ${state.profile.interests[drop.category]}/5.`
+      });
+      break;
+    }
+  }
+
+  /* 6 — keyword nudge ---------------------------------------------------- */
+  const kwHits = up.filter(e => {
+    const t = `${e.title} ${e.description || ''}`.toLowerCase();
+    return state.profile.keywords.some(k => k.trim() && t.includes(k.trim().toLowerCase()));
+  });
+  if (kwHits.length && !recs.some(r => kwHits.includes(r.e))){
+    out.push({
+      tone: 'good', icon: '🔎',
+      title: `Something matches “${state.profile.keywords[0]}”`,
+      body: `${kwHits[0].title} on ${fmtDate(kwHits[0].date)} lines up with a keyword you follow.`
+    });
+  }
+
+  return out.slice(0, 5);
+}
+
+/* =========================================================
+   RENDERERS
+   ========================================================= */
+
+function eventCard(e){
+  const cat = CATEGORIES[e.category];
+  const d = daysUntil(e.date);
+  const attending = state.attending.includes(e.id);
+  const when = d === 0 ? 'Today' : d === 1 ? 'Tomorrow' : `in ${d} days`;
+
+  return `
+  <article class="event" style="--cat:${cat.color}">
+    <div class="event-date">
+      <span class="ed-month">${new Date(e.date).toLocaleDateString(undefined,{month:'short'})}</span>
+      <span class="ed-day">${new Date(e.date).getDate()}</span>
+    </div>
+    <div class="event-body">
+      <div class="event-top">
+        <h3>${esc(e.title)}</h3>
+        <span class="pill" style="--cat:${cat.color}">${cat.icon} ${cat.label}</span>
+      </div>
+      <p class="event-meta">
+        ${fmtTime(e.date)}${e.location ? ' · ' + esc(e.location) : ''} · <strong>${when}</strong>
+        ${e.source === 'blackboard' ? ' · <span class="src">Blackboard</span>' : ''}
+      </p>
+      ${e.description ? `<p class="event-desc">${esc(e.description)}</p>` : ''}
+    </div>
+    <div class="event-actions">
+      <button class="btn ghost ${attending ? 'on' : ''}" data-attend="${e.id}">
+        ${attending ? '✓ Attending' : 'Attend'}
+      </button>
+      ${e.source === 'manual' ? `<button class="icon-btn" data-del="${e.id}" title="Delete">✕</button>` : ''}
+    </div>
+  </article>`;
+}
+
+function renderDashboard(){
+  const up = upcomingEvents();
+  const in7 = up.filter(e => daysUntil(e.date) <= 7);
+  const attending = up.filter(e => state.attending.includes(e.id));
+  const sugs = buildSuggestions();
+  const next = up.slice(0, 4);
+
+  $('#view-dashboard').innerHTML = `
+    <div class="stats">
+      <div class="stat"><div class="k">Upcoming</div><div class="v">${up.length}</div></div>
+      <div class="stat"><div class="k">Next 7 days</div><div class="v">${in7.length}</div></div>
+      <div class="stat"><div class="k">Attending</div><div class="v">${attending.length}</div></div>
+      <div class="stat"><div class="k">Blackboard</div>
+        <div class="v" style="font-size:17px">${state.lastSync ? 'Synced' : 'Not linked'}</div></div>
+    </div>
+
+    <div class="section-head">
+      <h2>Your agent suggests</h2>
+      <span class="badge">${sugs.length} item${sugs.length === 1 ? '' : 's'}</span>
+    </div>
+    ${sugs.map(s => `
+      <div class="sug ${s.tone}">
+        <div class="sug-icon">${s.icon}</div>
+        <div><h3>${esc(s.title)}</h3><p>${esc(s.body)}</p></div>
+      </div>`).join('')}
+
+    <div class="section-head">
+      <h2>Next up</h2>
+      <button class="btn ghost" data-goto="events">View all →</button>
+    </div>
+    ${next.length ? next.map(eventCard).join('') : '<p class="empty">Nothing scheduled yet.</p>'}
+  `;
+}
+
+function renderEvents(){
+  const up = upcomingEvents();
+  const filters = ['all', ...Object.keys(CATEGORIES)];
+  const list = currentFilter === 'all' ? up : up.filter(e => e.category === currentFilter);
+
+  $('#view-events').innerHTML = `
+    <div class="chips">
+      ${filters.map(f => `
+        <button class="chip ${f === currentFilter ? 'on' : ''}" data-filter="${f}">
+          ${f === 'all' ? 'All' : CATEGORIES[f].icon + ' ' + CATEGORIES[f].label}
+        </button>`).join('')}
+    </div>
+    ${list.length
+      ? list.map(eventCard).join('')
+      : `<p class="empty">No events here yet. <button class="link" data-openadd>Add one</button>.</p>`}
+  `;
+}
+
+function renderInterests(){
+  const p = state.profile;
+  $('#view-interests').innerHTML = `
+    <div class="card">
+      <h2>What should your agent prioritize?</h2>
+      <p class="hint">Slide each category to tell the agent how much you care. Every change instantly re-ranks your events and rewrites the suggestions on your dashboard.</p>
+      <div class="sliders">
+        ${Object.entries(CATEGORIES).map(([k, c]) => `
+          <div class="slider-row" style="--cat:${c.color}">
+            <div class="sr-label">${c.icon} ${c.label}</div>
+            <input type="range" min="1" max="5" step="1"
+                   value="${p.interests[k]}" data-interest="${k}">
+            <output>${p.interests[k]}</output>
+          </div>`).join('')}
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Keywords you follow</h2>
+      <p class="hint">Comma-separated. Any event whose title or notes mention one of these gets boosted.</p>
+      <label style="margin-top:12px">Keywords
+        <input id="kwInput" value="${esc(p.keywords.join(', '))}" placeholder="robotics, debate, biology">
+      </label>
+    </div>
+
+    <div class="card">
+      <h2>Planning preferences</h2>
+      <div class="grid2">
+        <label>Focused study hours per day
+          <input type="number" id="studyHours" min="1" max="8" value="${p.studyHours}">
+        </label>
+        <label>Remind me this many days ahead
+          <input type="number" id="reminderDays" min="1" max="14" value="${p.reminderDays}">
+        </label>
+      </div>
+      <p class="hint">These numbers feed directly into the study-plan suggestions.</p>
+    </div>
+
+    <div class="card">
+      <h2>Reset</h2>
+      <p class="hint">Wipe everything and reload the demo dataset.</p>
+      <div class="row-btns"><button class="btn ghost" id="resetAll">Reset all data</button></div>
+    </div>
+  `;
+
+  $('#kwInput').addEventListener('change', e => {
+    state.profile.keywords = e.target.value.split(',').map(s => s.trim()).filter(Boolean);
+    save(); renderDashboard(); renderHeader();
+    toast('Keywords updated');
+  });
+  $('#studyHours').addEventListener('change', e => {
+    state.profile.studyHours = Math.min(8, Math.max(1, +e.target.value || 2));
+    e.target.value = state.profile.studyHours;
+    save(); renderDashboard(); toast('Saved');
+  });
+  $('#reminderDays').addEventListener('change', e => {
+    state.profile.reminderDays = Math.min(14, Math.max(1, +e.target.value || 3));
+    e.target.value = state.profile.reminderDays;
+    save(); toast('Saved');
+  });
+  $('#resetAll').addEventListener('click', () => {
+    if (!confirm('Reset all events, interests and sync data?')) return;
+    state = defaultState(); save(); renderAll(); go('dashboard'); toast('Everything reset');
+  });
+}
+
+function renderBlackboard(){
+  $('#view-blackboard').innerHTML = `
+    <div class="notice">
+      <strong>Demo integration.</strong> A page running in your browser cannot sign in to
+      <code>shs.blackboard.cn</code> directly — Blackboard's REST API blocks cross-origin requests
+      (CORS) and requires a server-side OAuth token exchange. The form below is a UI stub: point
+      <code>fetchBlackboardEvents()</code> at your own backend proxy to make it live.
+    </div>
+
+    <div class="card">
+      <h2>Connection</h2>
+      <div class="grid2">
+        <label>Blackboard URL <input id="bbUrl" value="https://shs.blackboard.cn"></label>
+        <label>Username <input id="bbUser" placeholder="your student ID"></label>
+        <label>Password <input id="bbPass" type="password" placeholder="••••••••"></label>
+        <label>Data source
+          <select id="bbMode">
+            <option value="demo">Demo dataset</option>
+            <option value="live" disabled>Live API (requires backend)</option>
+          </select>
+        </label>
+      </div>
+      <div class="row-btns">
+        <button class="btn primary" id="bbTest">Test connection</button>
+        <button class="btn ghost" id="bbImport">Import demo events</button>
+      </div>
+      <div class="log" id="bbLog"></div>
+    </div>
+
+    <div class="card">
+      <h2>How the mapping works</h2>
+      <p class="hint">
+        Course announcements, assignment due dates and calendar entries get mapped into categories:
+        due dates → <em>Tests &amp; Exams</em>, calendar items → <em>School Events</em>, and anything
+        tagged “visit”, “competition” or “lecture” is auto-classified into the matching bucket.
+        Imported events are marked <span class="src">Blackboard</span> and are read-only — delete them
+        by unlinking the source.
+      </p>
+      <p class="hint">Last sync: <b>${state.lastSync ? new Date(state.lastSync).toLocaleString() : 'never'}</b></p>
+    </div>
+  `;
+
+  $('#bbTest').addEventListener('click', testBlackboard);
+  $('#bbImport').addEventListener('click', importDemo);
+}
+
+function renderHeader(){
+  $('#footName').textContent = state.profile.name;
+  const top = Object.entries(state.profile.interests)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 2)
+    .map(([k]) => CATEGORIES[k].label);
+  $('#footInterests').textContent = top.join(' · ');
+}
+
+function renderAll(){
+  renderHeader();
+  renderDashboard();
+  renderEvents();
+  if (currentView === 'interests') renderInterests();
+  if (currentView === 'blackboard') renderBlackboard();
+}
+
+/* =========================================================
+   ACTIONS
+   ========================================================= */
+
+function toggleAttend(id){
+  const i = state.attending.indexOf(id);
+  if (i >= 0) state.attending.splice(i, 1);
+  else state.attending.push(id);
+  save(); renderDashboard(); renderEvents();
+  toast(i >= 0 ? 'Removed from your plan' : 'Added to your plan');
+}
+
+function deleteEvent(id){
+  state.events = state.events.filter(e => e.id !== id);
+  state.attending = state.attending.filter(a => a !== id);
+  save(); renderDashboard(); renderEvents();
+  toast('Event deleted');
+}
+
+function addEvent({title, category, date, location, description}){
+  state.events.push({
+    id: uid(), title, category, date, location, description, source: 'manual'
+  });
+  save(); renderDashboard(); renderEvents();
+  toast('Event added');
+}
+
+function testBlackboard(){
+  const log = $('#bbLog');
+  log.innerHTML = '';
+  const url = $('#bbUrl').value.trim();
+  const user = $('#bbUser').value.trim();
+
+  const line = (msg, tone = '') => {
+    const d = document.createElement('div');
+    d.className = 'log-line ' + tone;
+    d.textContent = msg;
+    log.appendChild(d);
+  };
+
+  line(`POST ${url}/learn/api/public/v1/oauth2/token`);
+  line(user ? `authenticating as ${user}…` : 'no username supplied…');
+  setTimeout(() => {
+    line('✕ blocked: Cross-Origin Request Blocked (CORS) — the browser cannot reach Blackboard directly.', 'err');
+    line('→ Blackboard requires a server-side OAuth2 token exchange. Deploy a small proxy and point fetchBlackboardEvents() at it.', 'err');
+    line('ℹ Using the demo dataset instead. Click “Import demo events”.', 'ok');
+  }, 500);
+}
+
+function importDemo(){
+  const demo = [
+    {title:'Blackboard · AP Chemistry Quiz 4',   category:'test',        offset:5,  h:9,  loc:'Room 210',  desc:'Posted in AP Chemistry → Assessments.'},
+    {title:'Blackboard · History Essay Due',      category:'test',        offset:8,  h:23, loc:'Online',    desc:'Turnitin submission before 11:59pm.'},
+    {title:'Blackboard · University of Toronto Visit', category:'college', offset:11, h:13, loc:'Counseling Office', desc:'Sign-up sheet posted in the College Corner course.'},
+    {title:'Blackboard · Debate Tournament',      category:'competition', offset:14, h:8,  loc:'Main Hall', desc:'Announcement from the Debate Club course.'},
+    {title:'Blackboard · Guest Lecture: Climate Policy', category:'lecture', offset:17, h:17, loc:'Lecture Hall', desc:'Calendar entry from the Science Department.'},
+    {title:'Blackboard · Pep Rally',              category:'school',      offset:20, h:15, loc:'Main Gym',  desc:'School-wide calendar entry.'},
+  ];
+
+  let added = 0;
+  demo.forEach(d => {
+    if (state.events.some(e => e.title === d.title)) return;
+    state.events.push({
+      id: uid(),
+      title: d.title,
+      category: d.category,
+      date: isoFromOffset(d.offset, d.h),
+      location: d.loc,
+      description: d.desc,
+      source: 'blackboard',
+    });
+    added++;
+  });
+
+  state.lastSync = new Date().toISOString();
+  save(); renderDashboard(); renderEvents(); renderBlackboard();
+  toast(added ? `Imported ${added} event${added === 1 ? '' : 's'} from Blackboard` : 'Already up to date');
+}
+
+/* =========================================================
+   WIRING
+   ========================================================= */
+
+function go(view){
+  currentView = view;
+  $$('.nav-btn').forEach(b => b.classList.toggle('active', b.dataset.view === view));
+  $$('.view').forEach(v => v.hidden = v.id !== 'view-' + view);
+  const [title, sub] = VIEW_META[view];
+  $('#viewTitle').textContent = title;
+  $('#viewSub').textContent = sub;
+  if (view === 'dashboard') renderDashboard();
+  if (view === 'events') renderEvents();
+  if (view === 'interests') renderInterests();
+  if (view === 'blackboard') renderBlackboard();
+  window.scrollTo({top: 0, behavior: 'smooth'});
+}
+
+function openDialog(){
+  const sel = $('#catSelect');
+  sel.innerHTML = Object.entries(CATEGORIES)
+    .map(([k, c]) => `<option value="${k}">${c.icon} ${c.label}</option>`).join('');
+  const today = new Date();
+  $('#eventForm').reset();
+  $('#eventForm').date.value = `${today.getFullYear()}-${pad(today.getMonth()+1)}-${pad(today.getDate())}`;
+  $('#eventForm').time.value = '09:00';
+  $('#eventDialog').showModal();
+}
+
+function toast(msg){
+  const t = $('#toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+/* ---------- global listeners ---------- */
+document.addEventListener('click', e => {
+  const nav = e.target.closest('.nav-btn');
+  if (nav) { go(nav.dataset.view); return; }
+
+  const att = e.target.closest('[data-attend]');
+  if (att) { toggleAttend(att.dataset.attend); return; }
+
+  const del = e.target.closest('[data-del]');
+  if (del) { deleteEvent(del.dataset.del); return; }
+
+  const gt = e.target.closest('[data-goto]');
+  if (gt) { go(gt.dataset.goto); return; }
+
+  const f = e.target.closest('[data-filter]');
+  if (f) { currentFilter = f.dataset.filter; renderEvents(); return; }
+
+  if (e.target.closest('[data-openadd]')) { openDialog(); return; }
+});
+
+document.addEventListener('input', e => {
+  const k = e.target.dataset.interest;
+  if (!k) return;
+  state.profile.interests[k] = +e.target.value;
+  const out = e.target.parentElement.querySelector('output');
+  if (out) out.textContent = e.target.value;
+  save();
+  renderDashboard();
+  renderHeader();
+});
+
+$('#cancelEvent').addEventListener('click', () => $('#eventDialog').close());
+
+$('#eventForm').addEventListener('submit', () => {
+  const f = $('#eventForm');
+  const date = f.date.value;
+  const time = f.time.value || '09:00';
+  if (!f.title.value.trim() || !date) return;
+  addEvent({
+    title: f.title.value.trim(),
+    category: f.category.value,
+    date: `${date}T${time}`,
+    location: f.location.value.trim(),
+    description: f.description.value.trim(),
+  });
+});
+
+/* ---------- boot ---------- */
+renderAll();
+go('dashboard');
+</script>
+</body>
+</html>
